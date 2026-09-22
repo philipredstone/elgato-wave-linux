@@ -5,6 +5,7 @@ package guardian
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"os"
 	"time"
@@ -108,10 +109,10 @@ func (g *Guardian) announce(dev *device.Device) {
 		"card", dev.ALSACard(), "mixer", dev.Mixer != nil)
 }
 
-// TODO status file goes stale on SIGKILL
 func (g *Guardian) setStatus(s string) {
 	systemd.Notify("STATUS=" + s)
-	if err := os.WriteFile(config.StatusFile(), []byte(s+"\n"), 0o644); err != nil {
+	line := fmt.Sprintf("%d %s\n", os.Getpid(), s)
+	if err := os.WriteFile(config.StatusFile(), []byte(line), 0o644); err != nil {
 		g.log.Warn("write status file", "err", err)
 	}
 }

@@ -142,13 +142,24 @@ func status(out io.Writer, sel device.Selector) error {
 		fmt.Fprintln(out, "device:   not connected")
 	}
 
+	fmt.Fprintf(out, "daemon:   %s\n", daemonStatus())
+	return nil
+}
+
+// status file is "<pid> <state>", pid so we notice a dead daemon
+func daemonStatus() string {
 	b, err := os.ReadFile(config.StatusFile())
 	if err != nil {
-		fmt.Fprintln(out, "daemon:   not running")
-		return nil
+		return "not running"
 	}
-	fmt.Fprintf(out, "daemon:   %s\n", strings.TrimSpace(string(b)))
-	return nil
+	pid, state, ok := strings.Cut(strings.TrimSpace(string(b)), " ")
+	if !ok {
+		return "not running"
+	}
+	if _, err := os.Stat("/proc/" + pid); err != nil {
+		return "not running (last state: " + state + ")"
+	}
+	return state
 }
 
 func get(out io.Writer, sel device.Selector) error {
