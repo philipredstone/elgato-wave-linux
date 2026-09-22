@@ -1,0 +1,8 @@
+# Give the logged-in user access to supported devices, so waved can
+# send control requests and reset the port without root.
+# Keep in sync with internal/device.
+
+# Elgato Wave XLR
+SUBSYSTEM=="usb", ATTRS{idVendor}=="0fd9", ATTRS{idProduct}=="007d", TAG+="uaccess"
+# Elgato Wave:3 (untested)
+SUBSYSTEM=="usb", ATTRS{idVendor}=="0fd9", ATTRS{idProduct}=="0070", TAG+="uaccess"

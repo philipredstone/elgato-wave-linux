@@ -1,0 +1,15 @@
+# ~/.config/waved/config
+# Everything commented out below is the default.
+
+# Only look at this USB id instead of all supported ones. If it's not in
+# `waved devices` you also need to add it to the udev rule.
+#device = 0fd9:007d
+
+# Hold the playback endpoint open with a silent stream.
+#playback_pin = true
+
+# Put gain/mute/hp/low-z back after the device lost power.
+#remember_settings = true
+
+# notify-send on reset / replug needed.
+#notifications = true

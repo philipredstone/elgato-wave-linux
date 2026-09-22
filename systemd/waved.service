@@ -1,0 +1,13 @@
+[Unit]
+Description=Stream guard for Elgato Wave USB audio devices
+After=pipewire.service wireplumber.service
+
+[Service]
+Type=notify
+ExecStart=%h/.local/bin/waved daemon
+Restart=always
+RestartSec=2
+WatchdogSec=30
+
+[Install]
+WantedBy=default.target
