@@ -10,8 +10,12 @@ import (
 	"time"
 )
 
-// what snd-usb-audio logs once ep0 is dead (-110, sometimes -71)
-var wedgeMessages = []string{"usb_set_interface failed", "cannot submit urb"}
+// what snd-usb-audio logs once ep0 is dead. -19 (unplug) and -28 (bandwidth)
+// show up in the same messages and are not a wedge.
+var (
+	wedgeMessages = []string{"usb_set_interface failed", "cannot submit urb"}
+	wedgeCodes    = []string{"-110", "-71", "-32"}
+)
 
 const kernelRestartDelay = 10 * time.Second
 
@@ -27,6 +31,14 @@ func newKernelWatcher(log *slog.Logger) *kernelWatcher {
 }
 
 func (k *kernelWatcher) watch(port string) { k.port.Store(&port) }
+
+func (k *kernelWatcher) clear() { k.lastErr.Store(0) }
+
+// journalctl -k shows nothing at all without journal access, no error
+func (k *kernelWatcher) accessible() bool {
+	out, err := exec.Command("journalctl", "--dmesg", "--lines=1", "--quiet", "--output=cat").Output()
+	return err == nil && len(strings.TrimSpace(string(out))) > 0
+}
 
 func (k *kernelWatcher) errorWithin(d time.Duration) bool {
 	last := k.lastErr.Load()
@@ -72,8 +84,15 @@ func (k *kernelWatcher) matches(line string) bool {
 	if port == nil || !strings.Contains(line, "usb "+*port+":") {
 		return false
 	}
-	for _, m := range wedgeMessages {
-		if strings.Contains(line, m) {
+	if !containsAny(line, wedgeMessages) {
+		return false
+	}
+	return containsAny(line, wedgeCodes)
+}
+
+func containsAny(s string, subs []string) bool {
+	for _, sub := range subs {
+		if strings.Contains(s, sub) {
 			return true
 		}
 	}

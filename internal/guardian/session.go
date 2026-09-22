@@ -59,6 +59,7 @@ func (g *Guardian) session(ctx context.Context, dev *device.Device, src, sink *p
 		return fault{faultStartup, err.Error()}
 	}
 	g.ladder.healthy()
+	g.kernel.clear() // the reset itself may have logged some
 	g.log.Info("healthy")
 	g.setStatus("healthy")
 
@@ -134,16 +135,18 @@ func (s *session) supervise(ctx context.Context) fault {
 		}
 		now = time.Now()
 
-		// TODO presence check should come first, an unplug logs urb errors too
-		if g.kernel.errorWithin(kernelErrorTTL) {
-			return fault{faultHard, "kernel reports USB interface errors"}
-		}
-
 		if now.Sub(lastPresence) >= presenceInterval {
 			lastPresence = now
 			if !s.dev.Present() {
 				return fault{faultGone, "device disconnected"}
 			}
+		}
+
+		if g.kernel.errorWithin(kernelErrorTTL) {
+			if !s.dev.Present() {
+				return fault{faultGone, "device disconnected"}
+			}
+			return fault{faultHard, "kernel reports USB interface errors"}
 		}
 
 		if !s.capture.Alive() {

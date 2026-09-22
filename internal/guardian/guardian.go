@@ -52,6 +52,9 @@ func New(cfg config.Config, sel device.Selector, log *slog.Logger) *Guardian {
 }
 
 func (g *Guardian) Run(ctx context.Context) error {
+	if !g.kernel.accessible() {
+		g.log.Warn("no kernel log access (not in wheel/adm/systemd-journal?), hard wedge detection is off")
+	}
 	go g.kernel.run(ctx)
 	go systemd.Watchdog(ctx)
 	systemd.Notify("READY=1")
