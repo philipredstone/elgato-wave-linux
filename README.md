@@ -63,7 +63,9 @@ go install github.com/philipredstone/elgato-wave-linux/cmd/waved@latest
 waved install
 ```
 
-`waved install` writes a user unit pointing at the binary and starts it.
+`go install` puts the binary in `~/go/bin` (or `$GOBIN`), make sure that
+is on your `PATH`. `waved install` writes a user unit pointing at the
+binary and starts it.
 The device also needs a udev rule so the daemon can send control requests
 and reset the port without root:
 
