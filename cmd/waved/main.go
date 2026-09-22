@@ -29,6 +29,9 @@ commands:
   set <name> <val>  change a mixer setting
   meters            show input levels for two seconds
   devices           list supported devices
+  install           write the user unit for this binary and start it
+  uninstall         stop and remove the user unit
+  udev-rule         print the udev rule (pipe to /etc/udev/rules.d/60-waved.rules)
   version           print the version
 
 configuration: ` + "~/.config/waved/config" + `
@@ -71,6 +74,13 @@ func run(args []string, out io.Writer) error {
 		return meters(out, selector(cfg))
 	case "devices":
 		return devices(out)
+	case "install":
+		return install(out)
+	case "uninstall":
+		return uninstall(out)
+	case "udev-rule":
+		_, err := io.WriteString(out, udevRule)
+		return err
 	case "version", "--version":
 		fmt.Fprintln(out, "waved", version)
 		return nil

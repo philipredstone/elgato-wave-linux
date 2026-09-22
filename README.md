@@ -59,15 +59,25 @@ Needs Go, PipeWire with WirePlumber, and a systemd user session.
 `notify-send` is optional.
 
 ```sh
-make install              # ~/.local/bin/waved + user unit
-sudo make install-udev    # uaccess for the device
-make enable
+go install github.com/philipredstone/elgato-wave-linux/cmd/waved@latest
+waved install
 ```
+
+`waved install` writes a user unit pointing at the binary and starts it.
+The device also needs a udev rule so the daemon can send control requests
+and reset the port without root:
+
+```sh
+waved udev-rule | sudo tee /etc/udev/rules.d/60-waved.rules
+sudo udevadm control --reload && sudo udevadm trigger --subsystem-match=usb
+```
+
+From a checkout, `make install` does the same with a local build.
 
 The daemon tails `journalctl -k` for the -110 messages. That only works
 if your user can read the kernel log (wheel, adm or systemd-journal
-group). Without that the hard-wedge detection is silently off; the rest
-still works.
+group). It warns at startup if it can't; the rest still works, only the
+hard-wedge detection is off.
 
 ## Usage
 
@@ -80,6 +90,8 @@ waved set hp -12.5     -128..0 dB
 waved set low-z on
 waved meters           input levels for two seconds
 waved devices          supported devices
+waved install          set up the user unit
+waved uninstall
 ```
 
 Config is `~/.config/waved/config`, see [config.example](config.example).
@@ -98,7 +110,7 @@ daemon can't tell a muted input from a wedge, so it only catches stalls
 and wrong links.
 
 To try something else: `device = vid:pid` in the config and add the ID to
-the udev rule. To support it properly add it to `internal/device` and,
+the udev rule (`waved udev-rule` prints the current one). To support it properly add it to `internal/device` and,
 if you know the protocol, write a driver next to `internal/mixer/wavexlr`.
 
 ## Known issues / TODO
@@ -106,10 +118,6 @@ if you know the protocol, write a driver next to `internal/mixer/wavexlr`.
 - No suspend/resume handling. Haven't seen it break yet, but the
   escalation ladder could in theory reach the USB reset while the
   device is still waking up.
-- After a false hard-fault detection the daemon waits for a replug and
-  never retries on its own. Restarting the unit works.
-- `waved status` trusts a status file that goes stale if the daemon
-  gets killed hard.
 - Kernel quirk. The real fix is a `DEVICE_FLG` entry in `quirks.c`, probably
   `QUIRK_FLAG_FIXED_RATE` like the JBL Quantum810. Needs a usbmon capture
   of the wedge first. See NOTES.md.

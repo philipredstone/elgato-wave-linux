@@ -13,7 +13,7 @@ type Model struct {
 	Tested   bool
 }
 
-// keep udev/60-waved.rules in sync
+// keep cmd/waved/60-waved.rules in sync
 var Models = []Model{
 	{
 		Name:     "Elgato Wave XLR",
