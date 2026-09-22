@@ -21,7 +21,6 @@ type settingsSync struct {
 	pending mixer.Settings // seen once, needs a second poll
 }
 
-// TODO skip the write if nothing differs
 func (s *settingsSync) restore(dev *device.Device) {
 	if dev.Node == s.node {
 		return
@@ -35,30 +34,30 @@ func (s *settingsSync) restore(dev *device.Device) {
 	names := mixer.PersistedFields(mx)
 
 	saved, err := s.store.Load(dev.StateKey())
-	switch {
-	case errors.Is(err, state.ErrNone):
-	case err != nil:
+	if err != nil && !errors.Is(err, state.ErrNone) {
 		s.log.Error("load settings", "err", err)
 		return
-	default:
-		if err := mx.Write(saved.Pick(names)); err != nil {
-			s.log.Warn("restore settings", "err", err)
-			return
-		}
 	}
-
 	cur, err := mx.Read()
 	if err != nil {
 		s.log.Warn("read settings", "err", err)
 		return
 	}
+	cur = cur.Pick(names)
+
+	if want := saved.Pick(names); len(want) > 0 && !maps.Equal(want, cur) {
+		if err := mx.Write(want); err != nil {
+			s.log.Warn("restore settings", "err", err)
+			return
+		}
+		s.log.Info("settings restored", "values", mixer.Describe(mx, want, names))
+		cur = want
+	}
+
 	s.node, s.key = dev.Node, dev.StateKey()
-	s.saved = cur.Pick(names)
+	s.saved = cur
 	if err := s.store.Save(dev.StateKey(), s.saved); err != nil {
 		s.log.Error("save settings", "err", err)
-	}
-	if saved != nil {
-		s.log.Info("settings restored", "values", mixer.Describe(mx, s.saved, names))
 	}
 }
 
