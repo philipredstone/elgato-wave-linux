@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"runtime/debug"
 	"strings"
 	"syscall"
 	"time"
@@ -18,7 +19,16 @@ import (
 	"github.com/philipredstone/elgato-wave-linux/internal/mixer"
 )
 
-var version = "dev" // -ldflags -X, see Makefile
+var version = "dev" // -ldflags -X from the Makefile, build info for go install
+
+func init() {
+	if version != "dev" {
+		return
+	}
+	if bi, ok := debug.ReadBuildInfo(); ok && bi.Main.Version != "" && bi.Main.Version != "(devel)" {
+		version = bi.Main.Version
+	}
+}
 
 const usage = `usage: waved <command> [args]
 
