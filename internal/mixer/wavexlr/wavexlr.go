@@ -117,7 +117,7 @@ func (m *Mixer) Info() (mixer.Info, error) {
 	}
 	return mixer.Info{
 		Firmware: fmt.Sprintf("%d.%d.%d", b[6], b[7], b[8]),
-		Serial:   strings.TrimRight(string(b[27:47]), "\x00"),
+		Serial:   strings.TrimRight(string(b[35:47]), "\x00"), // [27:35] is some hardware id
 	}, nil
 }
 
