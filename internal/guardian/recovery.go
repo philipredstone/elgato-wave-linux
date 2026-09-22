@@ -14,6 +14,7 @@ const (
 	reenumerateWait   = 20 * time.Second
 	wireplumberSettle = 4 * time.Second
 	replugReminders   = 5
+	probeInterval     = 2 * time.Minute
 )
 
 type ladder struct {
@@ -86,12 +87,14 @@ func (g *Guardian) resetOrReplug(ctx context.Context, dev *device.Device) error 
 	return g.awaitReplug(ctx, dev)
 }
 
-// TODO dead end after a false positive, should probe ep0 now and then
+// waits for a new enumeration. every couple of minutes it also asks ep0
+// once, in case the "hard fault" was a false alarm and the device is fine.
 func (g *Guardian) awaitReplug(ctx context.Context, dev *device.Device) error {
 	g.log.Warn("waiting for the device to be replugged")
 	g.setStatus("replug needed")
 	msg := dev.Model.Name + " has crashed: unplug it and plug it back in"
 
+	lastProbe := time.Now()
 	for reminders := 0; ; {
 		cur, ok := g.selector.Find()
 		if ok && cur.Node != dev.Node {
@@ -102,6 +105,13 @@ func (g *Guardian) awaitReplug(ctx context.Context, dev *device.Device) error {
 		}
 		if ok && reminders < replugReminders && g.notifier.send(urgencyCritical, msg) {
 			reminders++
+		}
+		if ok && dev.Mixer != nil && time.Since(lastProbe) >= probeInterval {
+			lastProbe = time.Now()
+			if _, err := dev.Mixer.Info(); err == nil {
+				g.log.Info("control endpoint answers again, retrying")
+				return nil
+			}
 		}
 		if err := sleep(ctx, pollInterval); err != nil {
 			return err
